@@ -1,0 +1,82 @@
+# Claude Code, set up properly — a worked example
+
+Most Claude Code "setup" stops at installing the CLI. That's not the part that's hard.
+
+The hard part is that on a real codebase, Claude forgets your conventions halfway through, edits files
+it shouldn't touch, and makes you re-explain the same context every session.
+
+**This repo shows what a proper setup looks like.** `sample-app/` is a small but realistic
+TypeScript API — money handling, a repository layer, an error contract, tests. The kind of project
+where getting the details wrong actually costs you.
+
+---
+
+## What a delivery contains
+
+| File | What it does |
+|---|---|
+| [`CLAUDE.md`](sample-app/CLAUDE.md) | Loaded every session — architecture, conventions, and the traps this codebase actually falls into |
+| [`.claude/settings.json`](sample-app/.claude/settings.json) | Pre-approved safe commands, denied dangerous ones, typecheck hook on every edit |
+| [`.claude/commands/check.md`](sample-app/.claude/commands/check.md) | `/check` — typecheck, lint, test, fix failures without gaming them |
+| [`.claude/commands/review.md`](sample-app/.claude/commands/review.md) | `/review` — reviews your diff against *your* rules, not generic advice |
+| [`.claude/skills/add-endpoint/`](sample-app/.claude/skills/add-endpoint/SKILL.md) | Loads itself when you add an endpoint, enforces the full checklist |
+| [`SETUP-GUIDE.md`](sample-app/SETUP-GUIDE.md) | One page explaining every piece, in plain language |
+
+---
+
+## Before and after
+
+**Before** — you type this, every time:
+
+> Add a DELETE route for categories. Remember money is integer cents, don't touch the store directly
+> from the route, use ApiError instead of res.status, keep the handler synchronous or error handling
+> breaks, use .ts import extensions, colocate the test with node:test, and call repo._reset() in
+> beforeEach.
+
+**After** — you type this:
+
+> Add a DELETE route for categories.
+
+The `add-endpoint` skill loads on its own. The conventions are already known. The typecheck hook
+catches mistakes the moment they're written.
+
+---
+
+## The part that makes it worth paying for
+
+Anyone can generate a generic CLAUDE.md. Look at what's actually in
+[this one](sample-app/CLAUDE.md):
+
+> **`formatAmount` on negatives.** The sign is applied to the whole value, not the cents portion.
+> `-405` is `"-4.05"`, not `"-4.-05"`. There's a test for this; keep it passing.
+
+> **Express 4 catches synchronous throws and forwards them to error middleware. It does not catch
+> rejections from async handlers.** If you make a handler `async`, you must wrap it — an unwrapped
+> async throw becomes an unhandled rejection and the client hangs.
+
+You only write that after reading the code. A template can't produce it, and it's the difference
+between a setup that gets used and one that gets deleted in a week.
+
+---
+
+## Running it
+
+```bash
+cd sample-app
+npm install
+npm test
+```
+
+Then open the project in Claude Code and try `/check`, or ask it to add an endpoint and watch the
+skill load itself.
+
+---
+
+## Getting this for your codebase
+
+I do this as a fixed-price service — I read your repo and write the setup for your conventions, your
+commands, your traps. Delivered as a pull request with a guide.
+
+**[See the gig on Fiverr →](#)** *(link goes here once published)*
+
+Any language, any stack. I never need your API keys or credentials.
