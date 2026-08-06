@@ -1,13 +1,15 @@
-# Claude Code, set up properly — a worked example
+# Claude Code, set up properly — two worked examples
 
-Most Claude Code "setup" stops at installing the CLI. That's not the part that's hard.
+**This repo is proof, not a pitch.** It contains two complete setups you can read end to end before
+deciding anything:
 
-The hard part is that on a real codebase, Claude forgets your conventions halfway through, edits files
-it shouldn't touch, and makes you re-explain the same context every session.
+- **[`sample-app/`](sample-app/)** — a small but realistic TypeScript API (money handling, a
+  repository layer, an error contract, tests). Shows the *shape* of a delivery.
+- **[`examples/capnweb/`](examples/capnweb/)** — the same job done on
+  [Cloudflare's capnweb](https://github.com/cloudflare/capnweb), a production library I had never
+  seen. 5,700 lines, five target runtimes, **19 minutes** from clone to verified.
 
-**This repo shows what a proper setup looks like.** `sample-app/` is a small but realistic
-TypeScript API — money handling, a repository layer, an error contract, tests. The kind of project
-where getting the details wrong actually costs you.
+Read either one and you know exactly what you'd receive.
 
 ---
 
