@@ -74,8 +74,14 @@ skill load itself.
 
 ## Getting this for your codebase
 
-I do this as a fixed-price service — I read your repo and write the setup for your conventions, your
-commands, your traps. Delivered as a pull request with a guide.
+I do this as a fixed-price service. Your setup is built from your actual codebase — your conventions,
+your commands, the specific things that trip Claude up in *your* project. Not a template. Delivered as
+a pull request with a plain-language guide.
+
+Every delivery is run through [`tools/delivery-check.mjs`](tools/delivery-check.mjs) before it's sent.
+It verifies that every file path and command referenced in your CLAUDE.md actually resolves against
+your repo, that the config parses, and that no placeholder text or credentials slipped in. If it
+fails, it doesn't ship.
 
 **[See the gig on Fiverr →](#)** *(link goes here once published)*
 
