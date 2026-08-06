@@ -59,6 +59,19 @@ between a setup that gets used and one that gets deleted in a week.
 
 ---
 
+## A real codebase, not just this one
+
+The sample app above shows the *shape* of a delivery. **[examples/capnweb](examples/capnweb/)** shows
+what happens against a production repo I didn't write:
+[cloudflare/capnweb](https://github.com/cloudflare/capnweb) — ~3.9k stars, 5,700 lines of TypeScript,
+shipping to five runtimes.
+
+Clone to verified deliverable: **19 minutes.** Five findings, none of them visible from reading the
+source — including a test suite that fails unless you build first, and one test file that silently
+runs in four different runtimes.
+
+---
+
 ## Running it
 
 ```bash
