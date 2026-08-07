@@ -25,12 +25,26 @@ export function parseAmount(input: string): Cents {
   const sign = whole.startsWith('-') ? -1 : 1;
   const wholeCents = Math.abs(Number(whole)) * 100;
   const fractionCents = Number(fraction.padEnd(2, '0'));
+  const total = sign * (wholeCents + fractionCents);
 
-  return sign * (wholeCents + fractionCents);
+  // The regex allows unlimited digits. Past MAX_SAFE_INTEGER the arithmetic above
+  // silently returns a wrong number, which is the exact failure this module exists
+  // to prevent. Refuse instead.
+  if (!Number.isSafeInteger(total)) {
+    throw new RangeError(`Amount is too large to represent exactly: ${input}`);
+  }
+
+  return total;
 }
 
 /** Format integer cents for display ("1230" -> "12.30"). */
 export function formatAmount(cents: Cents): string {
+  // `Cents` is a type alias, not a guarantee. A float reaching here would produce
+  // "0.12.5" rather than failing, so check at the boundary.
+  if (!Number.isInteger(cents)) {
+    throw new RangeError(`Amount must be whole cents, got: ${cents}`);
+  }
+
   const sign = cents < 0 ? '-' : '';
   const abs = Math.abs(cents);
   return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;

@@ -110,19 +110,41 @@ if (existsSync(skillsDir)) {
 
 // ------------------------------------------------------------- B. placeholders
 
+// Every markdown file at the repo root, plus everything under .claude/.
+// Scanning only CLAUDE.md and SETUP-GUIDE.md missed anything else delivered
+// alongside them — a walkthrough shipped with its [brackets] unfilled would
+// have passed silently.
 const deliveredFiles = [
-  ...(has('CLAUDE.md') ? [join(root, 'CLAUDE.md')] : []),
-  ...(has('SETUP-GUIDE.md') ? [join(root, 'SETUP-GUIDE.md')] : []),
+  ...readdirSync(root)
+    .filter((f) => f.toLowerCase().endsWith('.md'))
+    .map((f) => join(root, f))
+    .filter((f) => statSync(f).isFile()),
   ...walk(join(root, '.claude')),
 ];
 
-const PLACEHOLDER = /\[X\]|\bTODO\b|\bFIXME\b|YOUR-USERNAME|YOUR_NAME|\blorem\b|\bxxx\b|\[your |\[insert/i;
+const PLACEHOLDER_TOKENS = /\bTODO\b|\bFIXME\b|YOUR-USERNAME|YOUR_NAME|\blorem\b|\bxxx\b/i;
+
+// Any bracketed span of 3+ characters that isn't a markdown link. Catches the
+// template idiom — [state the real baseline], [trap 1], [one-line cause] — which
+// the old token list missed entirely. 3+ excludes `- [ ]` and `- [x]` checkboxes;
+// the negative lookahead excludes [text](url).
+const PLACEHOLDER_BRACKET = /\[[^\]\n]{3,}\](?!\()/;
+
+// Code spans legitimately contain brackets (array indexing, type annotations),
+// so strip them before looking.
+const stripCode = (line) => line.replace(/`[^`\n]*`/g, '');
+
 const placeholderHits = [];
 for (const file of deliveredFiles) {
+  let inFence = false;
   read(file)
     .split(/\r?\n/)
     .forEach((line, i) => {
-      if (PLACEHOLDER.test(line)) {
+      if (line.trim().startsWith('```')) { inFence = !inFence; return; }
+      if (inFence) return;
+
+      const scannable = stripCode(line);
+      if (PLACEHOLDER_TOKENS.test(scannable) || PLACEHOLDER_BRACKET.test(scannable)) {
         placeholderHits.push(`${relative(root, file)}:${i + 1}  ${line.trim().slice(0, 60)}`);
       }
     });
@@ -200,8 +222,11 @@ if (has('CLAUDE.md')) {
 
 // ------------------------------------------------ E. referenced scripts exist
 
+const claudeText = has('CLAUDE.md') ? read(join(root, 'CLAUDE.md')) : '';
+
+// --- Node: npm scripts must exist in package.json
 const pkgPath = join(root, 'package.json');
-if (existsSync(pkgPath) && has('CLAUDE.md')) {
+if (existsSync(pkgPath) && claudeText) {
   let scripts = {};
   try {
     scripts = JSON.parse(read(pkgPath)).scripts ?? {};
@@ -210,7 +235,6 @@ if (existsSync(pkgPath) && has('CLAUDE.md')) {
   }
 
   const referenced = new Set();
-  const claudeText = read(join(root, 'CLAUDE.md'));
   for (const m of claudeText.matchAll(/npm run ([a-zA-Z0-9:_-]+)/g)) referenced.add(m[1]);
 
   const undefinedScripts = [...referenced].filter((s) => !(s in scripts));
@@ -218,6 +242,49 @@ if (existsSync(pkgPath) && has('CLAUDE.md')) {
     fail('npm scripts referenced exist', `not in package.json: ${undefinedScripts.join(', ')}`);
   } else if (referenced.size) {
     ok('npm scripts referenced exist', `${referenced.size} verified`);
+  }
+}
+
+// --- Every other ecosystem: at minimum, prove the manifest the commands imply is present.
+//
+// Without this, a Python or Go delivery skipped the command check silently and still
+// reported "Safe to deliver" — a weaker check with no warning that it was weaker.
+if (claudeText) {
+  const ECOSYSTEMS = [
+    { name: 'Node',    cmd: /\b(npm|pnpm|yarn|npx) /,        manifest: ['package.json'] },
+    { name: 'Python',  cmd: /\b(pytest|poetry|uv|python -m)/, manifest: ['pyproject.toml', 'setup.py', 'requirements.txt'] },
+    { name: 'Go',      cmd: /\bgo (test|build|run|vet)/,      manifest: ['go.mod'] },
+    { name: 'Rust',    cmd: /\bcargo (test|build|run|clippy)/, manifest: ['Cargo.toml'] },
+    { name: 'Ruby',    cmd: /\b(bundle|rake|rspec) /,         manifest: ['Gemfile'] },
+    { name: 'PHP',     cmd: /\b(composer|phpunit) /,          manifest: ['composer.json'] },
+    { name: 'Java',    cmd: /\b(mvn|gradle) /,                manifest: ['pom.xml', 'build.gradle', 'build.gradle.kts'] },
+    { name: 'Make',    cmd: /\bmake [a-z]/,                   manifest: ['Makefile', 'makefile'] },
+  ];
+
+  // Only look inside code formatting. Prose uses these words constantly —
+  // "the traps that make it go wrong" is not a Makefile.
+  const commandText = [
+    ...claudeText.matchAll(/```[\s\S]*?```/g),
+    ...claudeText.matchAll(/`[^`\n]+`/g),
+  ].map((m) => m[0]).join('\n');
+
+  const detected = ECOSYSTEMS.filter((e) => e.cmd.test(commandText));
+
+  if (detected.length === 0) {
+    warn('commands are runnable', 'CLAUDE.md references no recognizable build/test command — is it specific enough?');
+  } else {
+    const missing = detected.filter((e) => !e.manifest.some((m) => has(m)));
+    if (missing.length) {
+      fail('commands match the project',
+        missing.map((e) => `${e.name} commands used but no ${e.manifest.join(' / ')}`).join('; '));
+    } else {
+      ok('commands match the project', detected.map((e) => e.name).join(', '));
+    }
+  }
+
+  // A Node repo that only got the generic check is worth flagging.
+  if (!existsSync(pkgPath) && detected.some((e) => e.name !== 'Node')) {
+    warn('note', `non-Node project (${detected.map((e) => e.name).join(', ')}) — script-level verification is not available here, so read the commands yourself`);
   }
 }
 

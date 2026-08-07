@@ -21,6 +21,13 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
 
+  // express.json() throws a SyntaxError with a `body` property on malformed input.
+  // That's the client's fault, not ours, so it must not become a 500.
+  if (err instanceof SyntaxError && 'body' in err) {
+    res.status(400).json(ApiError.badRequest('Request body is not valid JSON').toJSON());
+    return;
+  }
+
   console.error('Unhandled error:', err);
   res.status(500).json(new ApiError('internal', 'Something went wrong').toJSON());
 });

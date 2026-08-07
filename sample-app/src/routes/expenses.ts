@@ -54,7 +54,13 @@ expenses.post('/', (req, res) => {
     throw ApiError.badRequest(`amount is not a valid money value: ${amount}`);
   }
 
-  const created = repo.create({ description: description.trim(), amountCents, category });
+  // Both are trimmed: `list()` filters by exact category match, so a stored
+  // " food " would be unreachable via ?category=food.
+  const created = repo.create({
+    description: description.trim(),
+    amountCents,
+    category: category.trim(),
+  });
   res.status(201).json(present(created));
 });
 
