@@ -17,12 +17,17 @@ Small expense-tracking REST API. Node + TypeScript + Express, ESM throughout.
 
 ```
 src/
-  index.ts                 app wiring, 404 handler, error middleware
+  app.ts                   app wiring, 404 handler, error middleware
+  index.ts                 bootstrap only — imports app and listens
   routes/expenses.ts       HTTP layer — validation, serialization
   db/expenseRepository.ts  the only module that touches storage
   lib/money.ts             currency handling
   lib/errors.ts            ApiError + the wire error shape
 ```
+
+**`app.ts` must stay free of side effects on import.** The listener lives in
+`index.ts` for one reason: tests import the app, and if importing it opened a socket the test
+process would never exit. Do not move `app.listen` back into `app.ts`.
 
 Data flows one direction: **route → repository → store.** Never the reverse, never a shortcut.
 

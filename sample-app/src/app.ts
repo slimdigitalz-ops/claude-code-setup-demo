@@ -1,0 +1,40 @@
+import express, { type NextFunction, type Request, type Response } from 'express';
+import { expenses } from './routes/expenses.ts';
+import { ApiError } from './lib/errors.ts';
+
+/**
+ * The app, with no side effects on import.
+ *
+ * Starting the listener lives in `index.ts` instead, so that importing the app
+ * from a test never opens a socket. Doing it the other way around leaves the
+ * test process hanging on an open handle.
+ */
+export const app = express();
+
+app.use(express.json());
+app.use('/expenses', expenses);
+
+app.use((_req, res) => {
+  res.status(404).json(ApiError.notFound('Route not found').toJSON());
+});
+
+/**
+ * The only place in the app that writes an error response.
+ * Unknown errors are logged in full and reported to the client as `internal`.
+ */
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof ApiError) {
+    res.status(err.status).json(err.toJSON());
+    return;
+  }
+
+  // express.json() throws a SyntaxError with a `body` property on malformed input.
+  // That's the client's fault, not ours, so it must not become a 500.
+  if (err instanceof SyntaxError && 'body' in err) {
+    res.status(400).json(ApiError.badRequest('Request body is not valid JSON').toJSON());
+    return;
+  }
+
+  console.error('Unhandled error:', err);
+  res.status(500).json(new ApiError('internal', 'Something went wrong').toJSON());
+});

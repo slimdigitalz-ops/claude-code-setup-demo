@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, beforeEach, describe, it } from 'node:test';
 import type { AddressInfo } from 'node:net';
-import { app } from '../index.ts';
+import { app } from '../app.ts';
 import * as repo from '../db/expenseRepository.ts';
 
 const server = app.listen(0);

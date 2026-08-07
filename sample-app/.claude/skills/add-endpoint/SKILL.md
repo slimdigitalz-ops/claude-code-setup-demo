@@ -34,8 +34,11 @@ Never write an error response in a handler. Throw `ApiError` and let the middlew
 
 ## 3. Wire it up
 
-Register the router in `src/index.ts` **above** the 404 handler. Order matters — the 404 handler
+Register the router in `src/app.ts` **above** the 404 handler. Order matters — the 404 handler
 matches everything.
+
+Do not add anything to `src/index.ts`. It is bootstrap only, and `app.ts` must stay side-effect-free
+on import or the test process will hang on an open socket.
 
 ## 4. Tests
 
